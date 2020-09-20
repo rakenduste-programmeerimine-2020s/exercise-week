@@ -1,0 +1,5 @@
+local-dev-exercise/data/
+exercise/node_modules
+exercise/npm-debug.log
+exercise/.env
+.DS_Store

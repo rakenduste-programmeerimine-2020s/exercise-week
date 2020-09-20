@@ -1,0 +1,29 @@
+version: '3.4'
+
+services:
+  exercise-mongo:
+    image: mongo:latest
+    command: --auth
+    ports:
+      - 27017:27017
+    volumes:
+      - './data/mongo:/data/db:delegated'
+    environment: 
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: root
+    container_name: 'exercise-mongo'
+  
+  exercise:
+    depends_on:
+      - exercise-mongo
+    build:
+      context: '../exercise'
+    ports:
+      - '3000:3000'
+      - '9000:9000'
+    volumes:
+      - '../exercise:/home/node/app:delegated'
+    environment: 
+      MONGODB_URI: mongodb://root:root@exercise-mongo/exercise?authSource=admin
+    command: 'run dev'
+    container_name: 'exercise'
