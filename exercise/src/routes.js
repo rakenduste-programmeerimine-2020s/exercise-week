@@ -1,15 +1,23 @@
-
+const Joi = require('joi')
 const Router = require('koa-router')
 const Topic = require('./models/topic')
 
 const router = new Router()
+
+const createSchema = Joi.object({
+  name: Joi.string().min(1)
+})
+
+const updateSchema = Joi.object({
+  name: Joi.string().min(1)
+})
 
 router.get('/health', async (context) => {
   context.status = 200
 })
 
 router.get('/topics', async (context) => {
-  const topics = await Topic.find({})
+  const topics = await Topic.find({ deletedAt: null })
 
   context.status = 200
   context.body = topics
@@ -18,7 +26,7 @@ router.get('/topics', async (context) => {
 router.get('/topics/:id', async (context) => {
   const { id } = context.params
 
-  const topic = await Topic.findById(id)
+  const topic = await Topic.findOne({ _id: id, deletedAt: null })
   if (!topic) {
     context.status = 404
     context.body = { message: 'Not found' }
@@ -31,9 +39,15 @@ router.get('/topics/:id', async (context) => {
 })
 
 router.post('/topics', async (context) => {
-  const { name } = context.request.body
+  const { value, error } = createSchema.validate(context.request.body)
+  if (error) {
+    context.status = 400
+    context.body = { error }
 
-  const newTopic = new Topic({ name })
+    return
+  }
+
+  const newTopic = new Topic(value)
   const topic = await newTopic.save()
 
   context.status = 201
@@ -41,10 +55,17 @@ router.post('/topics', async (context) => {
 })
 
 router.put('/topics/:id', async (context) => {
-  const { name } = context.request.body
   const { id } = context.params
 
-  const topic = await Topic.findById(id)
+  const { value, error } = updateSchema.validate(context.request.body)
+  if (error) {
+    context.status = 400
+    context.body = { error }
+
+    return
+  }
+
+  const topic = await Topic.findOne({ _id: id, deletedAt: null })
   if (!topic) {
     context.status = 404
     context.body = { message: 'Not found' }
@@ -52,15 +73,44 @@ router.put('/topics/:id', async (context) => {
     return
   }
 
-  topic.name = name
+  topic.name = value.name
   await topic.save()
 
   context.status = 200
   context.body = topic
 })
 
-router.delete('/topics/:id', async () => {
-  // TBA
+router.delete('/topics/:id', async (context) => {
+  const { id } = context.params
+
+  const topic = await Topic.findOne({ _id: id, deletedAt: null })
+  if (!topic) {
+    context.status = 404
+    context.body = { message: 'Not found' }
+
+    return
+  }
+
+  topic.deletedAt = new Date()
+  await topic.save()
+
+  context.status = 200
+  context.body = topic
+})
+
+// teine variant kuidas asja lahendada
+router.delete('/topics/:id/2', async (context) => {
+  const { n: rowsFound } = await Topic.updateOne(
+    { _id: context.params.id, deletedAt: null },
+    { deletedAt: new Date() }
+  )
+
+  if (!rowsFound) {
+    context.status = 404
+    return
+  }
+
+  context.status = 200
 })
 
 module.exports = router
