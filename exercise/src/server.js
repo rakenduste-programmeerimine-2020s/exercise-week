@@ -19,4 +19,6 @@ mongoose.connect(process.env.MONGODB_URI, { useNewUrlParser: true, useUnifiedTop
     process.exit(1)
   })
 
+mongoose.set('debug', true)
+
 module.exports = app
